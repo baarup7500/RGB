@@ -18,7 +18,8 @@
     },
     desktop: {
       icons: {},
-      wallpaperCustom: ''
+      wallpaperCustom: '',
+      activeIcon: null
     },
     windows: {},
     notes: {
@@ -698,6 +699,11 @@
   const launcherResults = document.getElementById('launcher-results');
   let launcherSelection = 0;
   const activeAppDisplay = document.getElementById('active-app-display');
+  let contextMenu;
+  let contextMenuList;
+  let statusTimeout = null;
+  let lastStatusFallback = 'Ready';
+  let lastPointerPosition = null;
 
   function loadState() {
     try {
@@ -734,6 +740,25 @@
   function saveStateDebounced() {
     clearTimeout(saveTimeout);
     saveTimeout = setTimeout(saveState, 400);
+  }
+
+  function setActiveAppLabel(label) {
+    lastStatusFallback = label || 'Ready';
+    clearTimeout(statusTimeout);
+    statusTimeout = null;
+    activeAppDisplay.textContent = lastStatusFallback;
+  }
+
+  function announce(message, duration = 1800) {
+    if (!message) return;
+    clearTimeout(statusTimeout);
+    const fallback = lastStatusFallback;
+    activeAppDisplay.textContent = message;
+    statusTimeout = setTimeout(() => {
+      if (activeAppDisplay.textContent === message) {
+        activeAppDisplay.textContent = fallback;
+      }
+    }, duration);
   }
 
   function applyTheme() {
@@ -912,13 +937,23 @@
       const coords = state.desktop.icons[app.id] || { x: 40, y: 40 };
       icon.style.left = `${coords.x}px`;
       icon.style.top = `${coords.y}px`;
+      icon.addEventListener('click', () => {
+        setActiveIcon(app.id);
+      });
       icon.addEventListener('dblclick', () => {
         openWindow(app.id);
         soundEngine.play(520, 0.12);
       });
+      icon.addEventListener('contextmenu', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setActiveIcon(app.id);
+        showContextMenu(getIconContextMenuItems(app.id), event.clientX, event.clientY);
+      });
       enableIconDrag(icon);
       iconLayer.appendChild(icon);
     });
+    updateIconSelection();
   }
 
   function enableIconDrag(icon) {
@@ -929,6 +964,7 @@
 
     icon.addEventListener('mousedown', (event) => {
       if (event.button !== 0) return;
+      setActiveIcon(icon.dataset.app);
       startX = event.clientX;
       startY = event.clientY;
       const coords = state.desktop.icons[icon.dataset.app];
@@ -958,11 +994,126 @@
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
       saveState();
+      updateIconSelection();
     }
   }
 
   function clamp(value, min, max) {
     return Math.min(Math.max(value, min), max);
+  }
+
+  function setActiveIcon(appId) {
+    const next = appId || null;
+    if (state.desktop.activeIcon === next) return;
+    state.desktop.activeIcon = next;
+    updateIconSelection();
+    saveStateDebounced();
+  }
+
+  function clearActiveIcon() {
+    if (!state.desktop.activeIcon) return;
+    state.desktop.activeIcon = null;
+    updateIconSelection();
+    saveStateDebounced();
+  }
+
+  function updateIconSelection() {
+    const icons = iconLayer.querySelectorAll('.desktop-icon');
+    icons.forEach((el) => {
+      el.classList.toggle('active', el.dataset.app === state.desktop.activeIcon);
+    });
+  }
+
+  function getIconContextMenuItems(appId) {
+    const app = apps[appId];
+    if (!app) return [];
+    return [
+      { label: `Open ${app.name}`, action: () => openWindow(appId) },
+      { label: 'Open Settings', action: () => openWindow('settings') },
+      { label: 'Show Info', action: () => announce(`${app.name} • ${app.glyph}`) }
+    ];
+  }
+
+  function getDesktopContextMenuItems() {
+    const ids = ['new-note', 'new-task', 'toggle-theme', 'open-settings'];
+    return quickActions
+      .filter((action) => ids.includes(action.id))
+      .map((action) => ({ label: action.label, action: action.handler }));
+  }
+
+  function getGlobalContextMenuItems() {
+    return [
+      {
+        label: 'Toggle Theme',
+        action: () => {
+          state.settings.theme = state.settings.theme === 'light' ? 'dark' : 'light';
+          applyTheme();
+          saveState();
+        }
+      },
+      { label: 'Open Settings', action: () => openWindow('settings') },
+      {
+        label: 'Show Desktop',
+        action: () => {
+          Array.from(windowLayer.querySelectorAll('.window')).forEach((win) => {
+            win.dataset.minimized = 'true';
+            win.style.display = 'none';
+            const id = win.dataset.app;
+            if (state.windows[id]) {
+              state.windows[id].minimized = true;
+            }
+          });
+          saveStateDebounced();
+          setActiveAppLabel('Ready');
+        }
+      }
+    ];
+  }
+
+  function initContextMenu() {
+    if (contextMenu) return;
+    contextMenu = document.createElement('div');
+    contextMenu.id = 'context-menu';
+    contextMenu.className = 'context-menu hidden';
+    contextMenuList = document.createElement('ul');
+    contextMenu.appendChild(contextMenuList);
+    document.body.appendChild(contextMenu);
+  }
+
+  function showContextMenu(items, x, y) {
+    if (!items || !items.length) {
+      hideContextMenu();
+      return;
+    }
+    if (!contextMenu || !contextMenuList) {
+      initContextMenu();
+    }
+    contextMenuList.innerHTML = '';
+    items.forEach((item) => {
+      const li = document.createElement('li');
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = item.label;
+      button.addEventListener('click', () => {
+        hideContextMenu();
+        item.action?.();
+      });
+      li.appendChild(button);
+      contextMenuList.appendChild(li);
+    });
+    contextMenu.classList.remove('hidden');
+    contextMenu.style.left = `${x}px`;
+    contextMenu.style.top = `${y}px`;
+    const { offsetWidth, offsetHeight } = contextMenu;
+    const maxX = window.innerWidth - offsetWidth - 8;
+    const maxY = window.innerHeight - offsetHeight - 8;
+    contextMenu.style.left = `${Math.max(8, Math.min(x, maxX))}px`;
+    contextMenu.style.top = `${Math.max(8, Math.min(y, maxY))}px`;
+  }
+
+  function hideContextMenu() {
+    if (!contextMenu) return;
+    contextMenu.classList.add('hidden');
   }
 
   function openWindow(appId, afterRender) {
@@ -979,14 +1130,26 @@
     const template = document.getElementById('window-template');
     windowEl = template.content.firstElementChild.cloneNode(true);
     const contentEl = windowEl.querySelector('.window-content');
+    const defaultWidth = config.width || 480;
+    const defaultHeight = config.height || 360;
     windowEl.dataset.app = appId;
-    windowEl.style.width = `${config.width || 480}px`;
-    windowEl.style.height = `${config.height || 360}px`;
-    const fallbackX = 120 + Math.random() * 120;
-    const fallbackY = 80 + Math.random() * 60;
+    windowEl.style.width = `${defaultWidth}px`;
+    windowEl.style.height = `${defaultHeight}px`;
+    const pointerFallback = (() => {
+      if (!lastPointerPosition) return null;
+      const bounds = windowLayer.getBoundingClientRect();
+      if (!bounds.width || !bounds.height) return null;
+      const maxX = Math.max(16, windowLayer.clientWidth - defaultWidth - 16);
+      const maxY = Math.max(16, windowLayer.clientHeight - defaultHeight - 16);
+      const x = clamp(lastPointerPosition.x - bounds.left - defaultWidth / 2, 16, maxX);
+      const y = clamp(lastPointerPosition.y - bounds.top - defaultHeight / 2, 16, maxY);
+      return { x, y };
+    })();
+    const fallbackX = pointerFallback ? pointerFallback.x : 120 + Math.random() * 120;
+    const fallbackY = pointerFallback ? pointerFallback.y : 80 + Math.random() * 60;
     const position = state.windows[appId]
       ? { ...state.windows[appId] }
-      : { x: fallbackX, y: fallbackY, width: config.width, height: config.height, minimized: false };
+      : { x: fallbackX, y: fallbackY, width: defaultWidth, height: defaultHeight, minimized: false };
     const left = position.x ?? fallbackX;
     const top = position.y ?? fallbackY;
     windowEl.style.left = `${left}px`;
@@ -1051,7 +1214,7 @@
       windowEl.remove();
       delete state.windows[appId];
       saveState();
-      activeAppDisplay.textContent = 'Ready';
+      setActiveAppLabel('Ready');
     });
 
     minimizeBtn.addEventListener('click', () => {
@@ -1117,7 +1280,7 @@
     document.querySelectorAll('.window').forEach((win) => win.classList.remove('window-focused'));
     windowEl.classList.add('window-focused');
     const app = apps[windowEl.dataset.app];
-    activeAppDisplay.textContent = app ? app.name : 'Ready';
+    setActiveAppLabel(app ? app.name : 'Ready');
   }
 
   function restoreWindows() {
@@ -1281,6 +1444,7 @@
     window.addEventListener('resize', () => {
       layoutIcons();
       renderIcons();
+      hideContextMenu();
     });
 
     windowLayer.addEventListener('click', (event) => {
@@ -1289,6 +1453,42 @@
       event.preventDefault();
       const appId = link.dataset.open;
       openWindow(appId);
+    });
+
+    iconLayer.addEventListener('mousedown', (event) => {
+      if (event.button !== 0) return;
+      if (!event.target.closest('.desktop-icon')) {
+        clearActiveIcon();
+      }
+    });
+
+    document.addEventListener('click', (event) => {
+      if (!event.target.closest('#context-menu')) {
+        hideContextMenu();
+      }
+    });
+
+    document.addEventListener('scroll', hideContextMenu, true);
+    window.addEventListener('blur', hideContextMenu);
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') hideContextMenu();
+    });
+
+    document.addEventListener('contextmenu', (event) => {
+      const icon = event.target.closest('.desktop-icon');
+      if (icon) return;
+      event.preventDefault();
+      if (iconLayer.contains(event.target)) {
+        clearActiveIcon();
+        showContextMenu(getDesktopContextMenuItems(), event.clientX, event.clientY);
+      } else {
+        showContextMenu(getGlobalContextMenuItems(), event.clientX, event.clientY);
+      }
+    });
+
+    document.addEventListener('pointerdown', (event) => {
+      lastPointerPosition = { x: event.clientX, y: event.clientY };
     });
   }
 
@@ -1311,11 +1511,13 @@
     layoutIcons();
     renderIcons();
     buildDock();
+    initContextMenu();
     restoreBrowser();
     restoreWindows();
     initTopBar();
     attachGlobalEvents();
     setupLauncher();
+    setActiveAppLabel('Ready');
   }
 
   document.addEventListener('DOMContentLoaded', bootstrap);
