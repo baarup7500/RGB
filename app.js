@@ -981,11 +981,15 @@
     windowEl.dataset.app = appId;
     windowEl.style.width = `${config.width || 480}px`;
     windowEl.style.height = `${config.height || 360}px`;
+    const fallbackX = 120 + Math.random() * 120;
+    const fallbackY = 80 + Math.random() * 60;
     const position = state.windows[appId]
       ? { ...state.windows[appId] }
-      : { x: 120 + Math.random() * 120, y: 80 + Math.random() * 60, width: config.width, height: config.height, minimized: false };
-    windowEl.style.left = `${position.x}px`;
-    windowEl.style.top = `${position.y}px`;
+      : { x: fallbackX, y: fallbackY, width: config.width, height: config.height, minimized: false };
+    const left = position.x ?? fallbackX;
+    const top = position.y ?? fallbackY;
+    windowEl.style.left = `${left}px`;
+    windowEl.style.top = `${top}px`;
     if (position.width) windowEl.style.width = `${position.width}px`;
     if (position.height) windowEl.style.height = `${position.height}px`;
     windowEl.dataset.minimized = position.minimized ? 'true' : 'false';
