@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Personal OS</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="top-bar">
+    <div class="left">
+      <span class="os-brand">GlowOS</span>
+      <button class="menu-btn" data-menu="file">File</button>
+      <button class="menu-btn" data-menu="edit">Edit</button>
+      <button class="menu-btn" data-menu="view">View</button>
+      <button class="menu-btn" data-menu="go">Go</button>
+      <button class="menu-btn" data-menu="help">Help</button>
+    </div>
+    <div class="center" id="active-app-display">Ready</div>
+    <div class="right">
+      <span class="status-icon" title="Wi-Fi connected">📶</span>
+      <span class="status-icon" title="Battery good">🔋</span>
+      <span class="status-icon" title="Sound">🔉</span>
+      <span id="clock"></span>
+    </div>
+  </div>
+
+  <div id="desktop">
+    <div id="wallpaper-overlay"></div>
+    <div id="icon-layer"></div>
+    <div id="window-layer"></div>
+  </div>
+
+  <div id="dock"></div>
+
+  <div id="launcher" class="hidden">
+    <div class="launcher-panel">
+      <input type="text" id="launcher-input" placeholder="Open apps or run actions" />
+      <ul id="launcher-results"></ul>
+    </div>
+  </div>
+
+  <template id="window-template">
+    <div class="window" data-app="">
+      <div class="window-chrome">
+        <div class="window-controls">
+          <button class="close">●</button>
+          <button class="minimize">●</button>
+        </div>
+        <div class="window-title">Window</div>
+        <div class="window-actions">
+          <button class="float">▣</button>
+        </div>
+      </div>
+      <div class="window-content"></div>
+      <div class="window-resize-handle"></div>
+    </div>
+  </template>
+
+  <template id="dock-item-template">
+    <button class="dock-item"></button>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
