@@ -1,70 +1,78 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Personal OS</title>
-  <link rel="stylesheet" href="styles.css" />
-</head>
-<body>
-  <div id="top-bar">
-    <div class="left">
-      <span class="os-brand">GlowOS</span>
-      <button class="menu-btn" data-menu="file">File</button>
-      <button class="menu-btn" data-menu="edit">Edit</button>
-      <button class="menu-btn" data-menu="view">View</button>
-      <button class="menu-btn" data-menu="go">Go</button>
-      <button class="menu-btn" data-menu="help">Help</button>
-    </div>
-    <div class="center" id="active-app-display">Ready</div>
-    <div class="right">
-      <span class="status-icon" title="Wi-Fi connected">📶</span>
-      <span class="status-icon" title="Battery good">🔋</span>
-      <span class="status-icon" title="Sound">🔉</span>
-      <span id="clock"></span>
-    </div>
-  </div>
-
-  <div id="desktop">
-    <div id="wallpaper-overlay"></div>
-    <div id="icon-layer"></div>
-    <div id="window-layer"></div>
-  </div>
-
-  <div id="dock"></div>
-
-  <div id="launcher" class="hidden">
-    <div class="launcher-panel">
-      <input type="text" id="launcher-input" placeholder="Open apps or run actions" />
-      <ul id="launcher-results"></ul>
-    </div>
-  </div>
-
-  <div id="desktop-menu" class="desktop-menu hidden">
-    <ul></ul>
-  </div>
-
-  <template id="window-template">
-    <div class="window" data-app="">
-      <div class="window-chrome">
-        <div class="window-controls">
-          <button class="close">●</button>
-          <button class="minimize">●</button>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GlowOS</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="os" data-theme="light">
+      <header class="top-bar">
+        <div class="top-bar__left">
+          <button class="top-bar__brand" data-action="about">GlowOS</button>
+          <nav class="top-bar__menus">
+            <button class="menu-trigger" data-menu="file">File</button>
+            <button class="menu-trigger" data-menu="edit">Edit</button>
+            <button class="menu-trigger" data-menu="view">View</button>
+            <button class="menu-trigger" data-menu="go">Go</button>
+            <button class="menu-trigger" data-menu="help">Help</button>
+          </nav>
         </div>
-        <div class="window-title">Window</div>
-        <div class="window-actions">
-          <button class="float">▣</button>
+        <div class="top-bar__center" id="active-app-label">Ready</div>
+        <div class="top-bar__right">
+          <span class="status-indicator" title="Network">📶</span>
+          <span class="status-indicator" title="Battery">🔋</span>
+          <span class="status-indicator" title="Sound">🔈</span>
+          <time id="menu-clock"></time>
+        </div>
+      </header>
+
+      <main class="desktop" id="desktop" tabindex="0">
+        <div class="wallpaper" id="wallpaper"></div>
+        <section class="desktop__icons" id="desktop-icons" aria-label="Desktop icons"></section>
+        <section class="desktop__windows" id="desktop-windows" aria-live="polite"></section>
+      </main>
+
+      <footer class="dock" id="dock"></footer>
+
+      <div class="launcher" id="launcher" hidden>
+        <div class="launcher__panel">
+          <input
+            class="launcher__input"
+            id="launcher-input"
+            type="text"
+            placeholder="Type to open apps or run actions"
+            autocomplete="off"
+          />
+          <ul class="launcher__results" id="launcher-results" role="listbox"></ul>
         </div>
       </div>
-      <div class="window-content"></div>
-      <div class="window-resize-handle"></div>
+
+      <menu class="context-menu" id="desktop-menu" type="context"></menu>
     </div>
-  </template>
 
-  <template id="dock-item-template">
-    <button class="dock-item"></button>
-  </template>
+    <template id="window-template">
+      <article class="window" data-app="">
+        <header class="window__titlebar">
+          <div class="window__controls">
+            <button class="window__control window__close" title="Close">●</button>
+            <button class="window__control window__minimize" title="Minimize">●</button>
+          </div>
+          <h1 class="window__title"></h1>
+          <div class="window__actions">
+            <button class="window__control window__float" title="Float">▣</button>
+          </div>
+        </header>
+        <section class="window__body"></section>
+        <div class="window__resize-handle" data-direction="se"></div>
+      </article>
+    </template>
 
-  <script src="app.js"></script>
-</body>
+    <template id="dock-item-template">
+      <button class="dock__item" type="button"></button>
+    </template>
+
+    <script src="app.js" type="module"></script>
+  </body>
 </html>
