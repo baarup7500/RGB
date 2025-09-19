@@ -696,6 +696,7 @@
   const launcher = document.getElementById('launcher');
   const launcherInput = document.getElementById('launcher-input');
   const launcherResults = document.getElementById('launcher-results');
+  let launcherSelection = 0;
   const activeAppDisplay = document.getElementById('active-app-display');
 
   function loadState() {
@@ -1142,24 +1143,25 @@
   }
 
   function setupLauncher() {
-    launcherInput.addEventListener('input', (e) => renderLauncherResults(e.target.value));
+    launcherInput.addEventListener('input', (e) => {
+      launcherSelection = 0;
+      renderLauncherResults(e.target.value);
+    });
 
     document.addEventListener('keydown', (event) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
         toggleLauncher();
       } else if (!launcher.classList.contains('hidden')) {
-        const selected = launcherResults.querySelector('.launcher-item.selected');
+        const items = getLauncherItems();
+        if (!items.length) return;
+        const selected = items[launcherSelection];
         if (event.key === 'ArrowDown') {
           event.preventDefault();
-          const next = selected?.nextElementSibling || launcherResults.firstElementChild;
-          if (selected) selected.classList.remove('selected');
-          next?.classList.add('selected');
+          updateLauncherSelection(launcherSelection + 1);
         } else if (event.key === 'ArrowUp') {
           event.preventDefault();
-          const prev = selected?.previousElementSibling || launcherResults.lastElementChild;
-          if (selected) selected.classList.remove('selected');
-          prev?.classList.add('selected');
+          updateLauncherSelection(launcherSelection - 1);
         } else if (event.key === 'Enter' && selected) {
           event.preventDefault();
           activateLauncherItem(selected.dataset.type, selected.dataset.id);
@@ -1173,6 +1175,7 @@
       if (event.target === launcher) hideLauncher();
     });
 
+    launcherSelection = 0;
     renderLauncherResults('');
   }
 
@@ -1191,15 +1194,33 @@
       launcherResults.appendChild(li);
       return;
     }
-    items.forEach((item, index) => {
+    items.forEach((item) => {
       const li = document.createElement('li');
-      li.className = 'launcher-item' + (index === 0 ? ' selected' : '');
+      li.className = 'launcher-item';
       li.dataset.id = item.id;
       li.dataset.type = item.type;
       li.innerHTML = `<span>${item.glyph} ${item.label}</span><span>${item.type === 'app' ? '↵' : '⇧↵'}</span>`;
       li.addEventListener('click', () => activateLauncherItem(item.type, item.id));
       launcherResults.appendChild(li);
     });
+    updateLauncherSelection(launcherSelection);
+  }
+
+  function getLauncherItems() {
+    return Array.from(launcherResults.querySelectorAll('.launcher-item[data-id]'));
+  }
+
+  function updateLauncherSelection(index = launcherSelection) {
+    const items = getLauncherItems();
+    if (!items.length) {
+      launcherSelection = 0;
+      return;
+    }
+    const normalized = ((index % items.length) + items.length) % items.length;
+    items.forEach((item, itemIndex) => {
+      item.classList.toggle('selected', itemIndex === normalized);
+    });
+    launcherSelection = normalized;
   }
 
   function activateLauncherItem(type, id) {
@@ -1219,6 +1240,7 @@
       launcher.classList.add('fade-in');
       setTimeout(() => launcher.classList.remove('fade-in'), 300);
       launcherInput.focus();
+      launcherSelection = 0;
       renderLauncherResults('');
     }
   }
