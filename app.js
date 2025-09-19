@@ -703,6 +703,7 @@
   let contextMenuList;
   let statusTimeout = null;
   let lastStatusFallback = 'Ready';
+  let lastPointerPosition = null;
 
   function loadState() {
     try {
@@ -1129,14 +1130,26 @@
     const template = document.getElementById('window-template');
     windowEl = template.content.firstElementChild.cloneNode(true);
     const contentEl = windowEl.querySelector('.window-content');
+    const defaultWidth = config.width || 480;
+    const defaultHeight = config.height || 360;
     windowEl.dataset.app = appId;
-    windowEl.style.width = `${config.width || 480}px`;
-    windowEl.style.height = `${config.height || 360}px`;
-    const fallbackX = 120 + Math.random() * 120;
-    const fallbackY = 80 + Math.random() * 60;
+    windowEl.style.width = `${defaultWidth}px`;
+    windowEl.style.height = `${defaultHeight}px`;
+    const pointerFallback = (() => {
+      if (!lastPointerPosition) return null;
+      const bounds = windowLayer.getBoundingClientRect();
+      if (!bounds.width || !bounds.height) return null;
+      const maxX = Math.max(16, windowLayer.clientWidth - defaultWidth - 16);
+      const maxY = Math.max(16, windowLayer.clientHeight - defaultHeight - 16);
+      const x = clamp(lastPointerPosition.x - bounds.left - defaultWidth / 2, 16, maxX);
+      const y = clamp(lastPointerPosition.y - bounds.top - defaultHeight / 2, 16, maxY);
+      return { x, y };
+    })();
+    const fallbackX = pointerFallback ? pointerFallback.x : 120 + Math.random() * 120;
+    const fallbackY = pointerFallback ? pointerFallback.y : 80 + Math.random() * 60;
     const position = state.windows[appId]
       ? { ...state.windows[appId] }
-      : { x: fallbackX, y: fallbackY, width: config.width, height: config.height, minimized: false };
+      : { x: fallbackX, y: fallbackY, width: defaultWidth, height: defaultHeight, minimized: false };
     const left = position.x ?? fallbackX;
     const top = position.y ?? fallbackY;
     windowEl.style.left = `${left}px`;
@@ -1472,6 +1485,10 @@
       } else {
         showContextMenu(getGlobalContextMenuItems(), event.clientX, event.clientY);
       }
+    });
+
+    document.addEventListener('pointerdown', (event) => {
+      lastPointerPosition = { x: event.clientX, y: event.clientY };
     });
   }
 

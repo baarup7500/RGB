@@ -220,6 +220,7 @@ button {
 
 #window-layer {
   padding: 24px;
+  pointer-events: none;
 }
 
 .window { 
@@ -234,6 +235,7 @@ button {
   min-width: 280px;
   min-height: 220px;
   animation: window-pop 0.32s ease;
+  pointer-events: auto;
 }
 
 @keyframes window-pop {
