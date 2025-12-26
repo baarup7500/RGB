@@ -51,6 +51,11 @@
       ],
       filter: 'inbox'
     },
+    tasting: {
+      participants: [],
+      beers: [],
+      scores: {}
+    },
     files: {
       tree: {
         type: 'folder',
@@ -326,6 +331,277 @@
         });
 
         renderTasks();
+      }
+    },
+    tasting: {
+      id: 'tasting',
+      name: 'Beer Tasting',
+      glyph: '🍺',
+      width: 760,
+      height: 520,
+      render(container) {
+        container.innerHTML = `
+          <div class="tasting-app">
+            <header class="tasting-header">
+              <div class="tasting-form">
+                <label>Participant</label>
+                <div class="tasting-input-group">
+                  <input class="participant-input" placeholder="Navn på deltager" />
+                  <button class="add-participant">Tilføj</button>
+                </div>
+              </div>
+              <div class="tasting-form">
+                <label>Øl</label>
+                <div class="tasting-input-group">
+                  <input class="beer-input" placeholder="Navn på øl" />
+                  <input class="beer-style-input" placeholder="Type / bryggeri" />
+                  <button class="add-beer">Tilføj</button>
+                </div>
+              </div>
+              <div class="tasting-summary">
+                <div>
+                  <span>Deltagere</span>
+                  <strong class="participant-count">0</strong>
+                </div>
+                <div>
+                  <span>Øl</span>
+                  <strong class="beer-count">0</strong>
+                </div>
+                <div>
+                  <span>Snit</span>
+                  <strong class="overall-average">-</strong>
+                </div>
+                <button class="reset-scores">Nulstil point</button>
+              </div>
+            </header>
+            <div class="tasting-table-wrapper">
+              <table class="tasting-table">
+                <thead></thead>
+                <tbody></tbody>
+                <tfoot></tfoot>
+              </table>
+              <div class="tasting-empty hidden">
+                Tilføj deltagere og øl for at registrere point.
+              </div>
+            </div>
+          </div>
+        `;
+
+        const participantInput = container.querySelector('.participant-input');
+        const beerInput = container.querySelector('.beer-input');
+        const beerStyleInput = container.querySelector('.beer-style-input');
+        const addParticipantBtn = container.querySelector('.add-participant');
+        const addBeerBtn = container.querySelector('.add-beer');
+        const resetBtn = container.querySelector('.reset-scores');
+        const tableHead = container.querySelector('.tasting-table thead');
+        const tableBody = container.querySelector('.tasting-table tbody');
+        const tableFoot = container.querySelector('.tasting-table tfoot');
+        const emptyState = container.querySelector('.tasting-empty');
+        const participantCount = container.querySelector('.participant-count');
+        const beerCount = container.querySelector('.beer-count');
+        const overallAverage = container.querySelector('.overall-average');
+
+        function updateCounts() {
+          participantCount.textContent = state.tasting.participants.length;
+          beerCount.textContent = state.tasting.beers.length;
+        }
+
+        function getScore(beerId, participantId) {
+          return state.tasting.scores?.[beerId]?.[participantId] ?? '';
+        }
+
+        function setScore(beerId, participantId, value) {
+          state.tasting.scores[beerId] = state.tasting.scores[beerId] || {};
+          if (value === '') {
+            delete state.tasting.scores[beerId][participantId];
+            return;
+          }
+          state.tasting.scores[beerId][participantId] = value;
+        }
+
+        function average(values) {
+          if (!values.length) return null;
+          const total = values.reduce((sum, val) => sum + val, 0);
+          return total / values.length;
+        }
+
+        function renderTable() {
+          tableHead.innerHTML = '';
+          tableBody.innerHTML = '';
+          tableFoot.innerHTML = '';
+
+          const hasParticipants = state.tasting.participants.length > 0;
+          const hasBeers = state.tasting.beers.length > 0;
+          emptyState.classList.toggle('hidden', hasParticipants && hasBeers);
+
+          if (!hasParticipants || !hasBeers) {
+            updateCounts();
+            overallAverage.textContent = '-';
+            return;
+          }
+
+          const headRow = document.createElement('tr');
+          headRow.innerHTML = `<th>Øl</th>`;
+          state.tasting.participants.forEach((participant) => {
+            const th = document.createElement('th');
+            th.innerHTML = `
+              <div class="tasting-header-cell">
+                <span>${escapeHtml(participant.name)}</span>
+                <button class="remove" data-participant="${participant.id}" title="Fjern deltager">✕</button>
+              </div>
+            `;
+            headRow.appendChild(th);
+          });
+          const avgTh = document.createElement('th');
+          avgTh.textContent = 'Gns.';
+          headRow.appendChild(avgTh);
+          tableHead.appendChild(headRow);
+
+          const overallScores = [];
+
+          state.tasting.beers.forEach((beer) => {
+            const row = document.createElement('tr');
+            const nameCell = document.createElement('td');
+            nameCell.innerHTML = `
+              <div class="tasting-beer-cell">
+                <div>
+                  <strong>${escapeHtml(beer.name)}</strong>
+                  ${beer.style ? `<small>${escapeHtml(beer.style)}</small>` : ''}
+                </div>
+                <button class="remove" data-beer="${beer.id}" title="Fjern øl">✕</button>
+              </div>
+            `;
+            row.appendChild(nameCell);
+
+            const beerScores = [];
+
+            state.tasting.participants.forEach((participant) => {
+              const cell = document.createElement('td');
+              const input = document.createElement('input');
+              input.type = 'number';
+              input.min = '0';
+              input.max = '10';
+              input.step = '0.5';
+              input.value = getScore(beer.id, participant.id);
+              input.placeholder = '0-10';
+              input.addEventListener('input', (event) => {
+                const raw = event.target.value;
+                const parsed = raw === '' ? '' : Number(raw);
+                if (parsed !== '' && Number.isNaN(parsed)) return;
+                setScore(beer.id, participant.id, parsed);
+                saveStateDebounced();
+                renderTable();
+              });
+              cell.appendChild(input);
+              row.appendChild(cell);
+
+              if (input.value !== '') {
+                const numeric = Number(input.value);
+                if (!Number.isNaN(numeric)) {
+                  beerScores.push(numeric);
+                  overallScores.push(numeric);
+                }
+              }
+            });
+
+            const avgCell = document.createElement('td');
+            const beerAvg = average(beerScores);
+            avgCell.textContent = beerAvg === null ? '-' : beerAvg.toFixed(1);
+            row.appendChild(avgCell);
+            tableBody.appendChild(row);
+          });
+
+          const footRow = document.createElement('tr');
+          footRow.innerHTML = `<td><strong>Gns.</strong></td>`;
+          state.tasting.participants.forEach((participant) => {
+            const values = [];
+            state.tasting.beers.forEach((beer) => {
+              const score = getScore(beer.id, participant.id);
+              if (score !== '' && !Number.isNaN(Number(score))) {
+                values.push(Number(score));
+              }
+            });
+            const cell = document.createElement('td');
+            const avg = average(values);
+            cell.textContent = avg === null ? '-' : avg.toFixed(1);
+            footRow.appendChild(cell);
+          });
+          const overallCell = document.createElement('td');
+          const totalAvg = average(overallScores);
+          overallCell.textContent = totalAvg === null ? '-' : totalAvg.toFixed(1);
+          footRow.appendChild(overallCell);
+          tableFoot.appendChild(footRow);
+
+          overallAverage.textContent = totalAvg === null ? '-' : totalAvg.toFixed(1);
+          updateCounts();
+
+          tableHead.querySelectorAll('button.remove[data-participant]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+              const id = btn.dataset.participant;
+              state.tasting.participants = state.tasting.participants.filter((p) => p.id !== id);
+              Object.keys(state.tasting.scores).forEach((beerId) => {
+                if (state.tasting.scores[beerId]) {
+                  delete state.tasting.scores[beerId][id];
+                }
+              });
+              saveState();
+              renderTable();
+            });
+          });
+
+          tableBody.querySelectorAll('button.remove[data-beer]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+              const id = btn.dataset.beer;
+              state.tasting.beers = state.tasting.beers.filter((b) => b.id !== id);
+              delete state.tasting.scores[id];
+              saveState();
+              renderTable();
+            });
+          });
+        }
+
+        addParticipantBtn.addEventListener('click', () => {
+          const name = participantInput.value.trim();
+          if (!name) return;
+          state.tasting.participants.push({ id: makeId(), name });
+          participantInput.value = '';
+          saveState();
+          renderTable();
+          soundEngine.play(520);
+        });
+
+        participantInput.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter') addParticipantBtn.click();
+        });
+
+        addBeerBtn.addEventListener('click', () => {
+          const name = beerInput.value.trim();
+          if (!name) return;
+          state.tasting.beers.push({ id: makeId(), name, style: beerStyleInput.value.trim() });
+          beerInput.value = '';
+          beerStyleInput.value = '';
+          saveState();
+          renderTable();
+          soundEngine.play(580);
+        });
+
+        beerStyleInput.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter') addBeerBtn.click();
+        });
+
+        beerInput.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter') addBeerBtn.click();
+        });
+
+        resetBtn.addEventListener('click', () => {
+          if (!confirm('Nulstil alle point?')) return;
+          state.tasting.scores = {};
+          saveState();
+          renderTable();
+        });
+
+        updateCounts();
+        renderTable();
       }
     },
     files: {
@@ -727,6 +1003,7 @@
       windows: { ...DEFAULT_STATE.windows, ...saved.windows },
       notes: { ...DEFAULT_STATE.notes, ...saved.notes },
       tasks: { ...DEFAULT_STATE.tasks, ...saved.tasks },
+      tasting: { ...DEFAULT_STATE.tasting, ...saved.tasting },
       files: { ...DEFAULT_STATE.files, ...saved.files },
       terminal: { ...DEFAULT_STATE.terminal, ...saved.terminal },
       browser: { ...DEFAULT_STATE.browser, ...saved.browser }
