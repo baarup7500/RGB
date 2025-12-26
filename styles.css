@@ -539,6 +539,164 @@ body.dark .launcher-panel {
   color: rgba(0, 0, 0, 0.45);
 }
 
+.tasting-app {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+}
+
+.tasting-header {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(260px, 1.2fr) minmax(180px, 0.8fr);
+  gap: 16px;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.tasting-form {
+  display: grid;
+  gap: 8px;
+}
+
+.tasting-form label {
+  font-weight: 600;
+}
+
+.tasting-input-group {
+  display: grid;
+  gap: 8px;
+}
+
+.tasting-input-group input {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.tasting-input-group button {
+  border: none;
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  background: var(--accent);
+  color: white;
+  font-weight: 600;
+}
+
+.tasting-summary {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.tasting-summary div {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+}
+
+.tasting-summary strong {
+  font-size: 16px;
+}
+
+.tasting-summary button {
+  border: none;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(127, 90, 240, 0.2);
+  color: var(--accent);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tasting-table-wrapper {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 16px;
+  padding: 12px;
+  overflow: hidden;
+  position: relative;
+}
+
+.tasting-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.tasting-table th,
+.tasting-table td {
+  padding: 10px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  text-align: center;
+}
+
+.tasting-table th:first-child,
+.tasting-table td:first-child {
+  text-align: left;
+  width: 180px;
+}
+
+.tasting-table thead th {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tasting-table input {
+  width: 64px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  text-align: center;
+}
+
+.tasting-table tfoot td {
+  font-weight: 600;
+  background: rgba(127, 90, 240, 0.08);
+}
+
+.tasting-header-cell,
+.tasting-beer-cell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tasting-beer-cell small {
+  display: block;
+  color: rgba(0, 0, 0, 0.5);
+  margin-top: 2px;
+}
+
+.tasting-table button.remove {
+  border: none;
+  background: transparent;
+  color: rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.tasting-table button.remove:hover {
+  color: var(--accent);
+}
+
+.tasting-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.5);
+  padding: 16px;
+}
+
 .files-app {
   display: grid;
   grid-template-columns: 220px 1fr;
